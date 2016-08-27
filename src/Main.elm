@@ -9,6 +9,7 @@ import Task
 
 import Semantic as UI
 import Tags exposing (Tag)
+import Bookmarks exposing (Bookmark)
 
 
 main =
@@ -26,18 +27,27 @@ projectLogo = "assets/images/logo.svg"
 
 type alias Model =
     { currentTag : String
-    , tags: List(Tag)
-    , loading: Bool
+    , tags       : List Tag
+    , bookmarks  : List Bookmark
+    , loading    : Bool
     }
 
 init : (Model, Cmd Message)
 init =
-    ( Model "" [] False
-    , fetchTags
+    ( Model "" [] [] False
+    , Cmd.batch [fetchTags, fetchBookmarks "c"]
     )
 
+fetchTags: Cmd Message
 fetchTags =
-    Task.perform FetchTagsFail FetchTagsSucceed Tags.fetchTagsTask
+    Task.perform FetchTagsFail FetchTagsSucceed
+        Tags.fetchTagsTask
+
+fetchBookmarks: String -> Cmd Message
+fetchBookmarks tag =
+    Task.perform FetchBookmarksFail FetchBookmarksSucceed
+        (Bookmarks.fetchBookmarksTask tag)
+
 
 -- Update
 
@@ -45,6 +55,10 @@ type Message
     = FetchTags
     | FetchTagsSucceed (List Tag)
     | FetchTagsFail Http.Error
+
+    | FetchBookmarks String
+    | FetchBookmarksSucceed (List Bookmark)
+    | FetchBookmarksFail Http.Error
 
 update : Message -> Model -> (Model, Cmd Message)
 update message model =
@@ -61,39 +75,66 @@ update message model =
 
         FetchTagsFail error ->
             { model | loading = False
-                    , tags = [ Tag "Error" ("Error: " ++ (toString error)) 0 ]
+                    , tags = [ Tags.error (toString error) ]
             } ! []
+
+        FetchBookmarks tag ->
+            { model | loading = True
+                    , tags = []
+            } ! [fetchBookmarks tag]
+
+        FetchBookmarksSucceed newBookmarks ->
+            { model | loading = False
+                    , bookmarks = newBookmarks
+            } ! []
+
+        FetchBookmarksFail error ->
+            { model | loading = False
+                    , bookmarks = [ Bookmarks.error (toString error) ]
+            } ! []
+
+
 
 
 -- View
 
 menuTags model =
     UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary"
-        <| UI.linkedItemsList <| List.map Tags.item model.tags
+        <| List.map Tags.item model.tags
 
 
 menuCreate =
     UI.popupMenu "navigation_menuCreate" "New" "plus" "basic" <|
-        UI.linkedItemsList
-            [ UI.linkedItem "New bookmark" "bookmark" ""
-            , UI.linkedItem "Create a new note" "sticky note" ""
-            ]
+        [ UI.linkedItem "New bookmark" "bookmark" ""
+        , UI.linkedItem "Create a new note" "sticky note" ""
+        ]
 
 
-view model =
-    UI.page projectName projectLogo
-     -- header
+viewBookmarks bookmarks =
+    div [ class "ui items" ] <|
+        List.map Bookmarks.item bookmarks
+
+
+header model =
+    UI.header projectName projectLogo
         [ menuTags model
         , menuCreate
         ]
-     -- body
-        [ div [ style [ ( "height", "10em" ) ] ] [ text "Lorem ipsum" ]
+
+body model =
+    UI.body <|
+        [ div [ style [ ( "height", "10em" ) ] ]
+            [ text "Lorem ipsum" ]
+        , viewBookmarks model.bookmarks
         , div [ class "ui buttons" ]
             [ button [ class "ui active button" ] [ text "One" ]
             , button [ class "ui button" ] [ text "Two" ]
             , button [ class "ui button" ] [ text "Three" ]
             ]
         ]
+
+
+view model = UI.page (header model) (body model)
 
 
 -- Subscriptions

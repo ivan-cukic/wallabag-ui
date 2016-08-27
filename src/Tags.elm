@@ -1,15 +1,13 @@
-module Tags exposing (..)
+module Tags exposing (item, Tag, fetchTagsTask, decodeTags, error)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
-import Task
 import Http
 
 import Json.Decode as Json
 import Json.Decode.Pipeline as JsonPipeline exposing (decode, required)
 
--- Tags
 
 type alias Tag =
     { slug       : String
@@ -17,11 +15,13 @@ type alias Tag =
     , post_count : Int
     }
 
+error message = Tag "error" message 0
+
 decodeTag : Json.Decoder Tag
 decodeTag = decode Tag
             |> JsonPipeline.required "slug" Json.string
             |> JsonPipeline.required "title" Json.string
-            |> JsonPipeline.required "post_count" Json.int
+            |> JsonPipeline.optional "post_count" Json.int 0
 
 decodeTags : Json.Decoder (List Tag)
 decodeTags = Json.list decodeTag

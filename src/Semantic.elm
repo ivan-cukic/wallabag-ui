@@ -1,62 +1,87 @@
-module Semantic exposing (..)
+module Semantic exposing (page, header, body, linkedItem, popupMenu, icon)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+import VirtualDom exposing (Node)
 
+
+script' : String -> Node a
 script' s = node "script" [] [ text s ]
 
-
-initDropdown id buttonId = script' <|
+initAllDropdowns : Node a
+initAllDropdowns = script' <|
         "
-            $('#" ++ id ++ "').dropdown({
-                on: 'hover',
-                onShow: function() {
-                    $('#" ++ buttonId ++ "').addClass('pointing');
-                    $('#" ++ buttonId ++ "').addClass('below');
-                },
-                onHide: function() {
-                    $('#" ++ buttonId ++ "').removeClass('pointing');
-                    $('#" ++ buttonId ++ "').removeClass('below');
-                }
+            $('.dropdown').dropdown({
+                on: 'hover'
             });
         "
 
+logo : String -> String -> Node a
 logo title icon =
-    a [ class "ui image big label teal left ribbon" ]
+    span [ class "ui item big teal ribbon label" ]
         [ img [ src icon ] []
         , text title
         ]
 
+icon : String -> Node a
 icon id = i [ class <| id ++ " icon" ] []
 
-linkedItemsList items =
-    div [ class "ui link list" ] items
-
+linkedItem : String -> String -> String -> Node a
 linkedItem itemTitle itemIcon itemUrl =
     a [ class "item", href itemUrl ] <|
         if itemIcon == "" then [ text itemTitle ]
                           else [ icon itemIcon, text itemTitle ]
 
-popupMenu menuId menuTitle menuIcon menuType menuContent =
-    span [ id menuId, class "ui dropdown item" ]
-        [ button [ id (menuId ++ "_button"), class ("ui " ++ menuType ++ " button big label") ]
-            [ icon menuIcon
-            , text menuTitle
-            ]
-
-        , div [ class "menu ui floating popup basic" ]
-            [ div [ class "ui segment basic" ]
-                [ menuContent ]
-            ]
-        , initDropdown menuId (menuId ++ "_button")
+popupMenu : String -> String -> String -> String -> List (Node a) -> Node a
+popupMenu menuId menuTitle menuIcon menuType items =
+    a [ class "ui dropdown item" ]
+        [ icon menuIcon
+        , text menuTitle
+        , div [ class "menu" ] items
         ]
 
-header title icon items =
-    div [ style [ ("height", "100px") ] ]
-        ( [ logo title icon ] ++ items )
+header : String -> String -> List (Node a) -> Node a
+header pageTitle pageIcon menus =
+    div [ class "ui computer tablet only row" ]
+        [ div [ class "ui large fixed menu navbar page grid" ]
+            ( [ logo pageTitle pageIcon ] ++ menus )
+        ]
 
-page title icon headerItems bodyItems =
-    div [ class "ui raised segment container" ]
-        ( [ header title icon headerItems ] ++ bodyItems )
+body : List (Node a) -> Node a
+body items =
+    div [ class "ui page grid main" ]
+        [ div [ class "row" ]
+            [ div [ class "column padding-reset" ] items
+            ]
+        ]
+
+
+page : Node a -> Node a -> Node a
+page header items =
+    div [ class "ui grid" ]
+        [ header
+        , items
+        , initAllDropdowns ]
+
+
+
+-- items : Node a ->
+
+
+
+-- initDropdown id buttonId = script' <|
+--         "
+--             $('#" ++ id ++ "').dropdown({
+--                 on: 'hover',
+--                 onShow: function() {
+--                     $('#" ++ buttonId ++ "').addClass('pointing');
+--                     $('#" ++ buttonId ++ "').addClass('below');
+--                 },
+--                 onHide: function() {
+--                     $('#" ++ buttonId ++ "').removeClass('pointing');
+--                     $('#" ++ buttonId ++ "').removeClass('below');
+--                 }
+--             });
+--         "
 

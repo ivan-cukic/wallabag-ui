@@ -42,8 +42,8 @@ $is_first = true;
     }
 ?>
     {
-        "slug" : "<?=$slug ?>",
-        "title" : "<?=$label ?>",
+        "slug"       : <?=json_encode($slug) ?>,
+        "title"      : <?=json_encode($label) ?>,
         "post_count" : <?=$count ?>
     }
 <?php } ?>
