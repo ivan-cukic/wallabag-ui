@@ -67,22 +67,33 @@ update message model =
 
 -- View
 
-tagsColumn tags =
-    UI.linkedItemsList Tags.item tags
+menuTags model =
+    UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary"
+        <| UI.linkedItemsList <| List.map Tags.item model.tags
 
 
-tagsMenu model =
-    UI.popupMenu "tags_menu" "Tags" "tags" <| tagsColumn model.tags
+menuCreate =
+    UI.popupMenu "navigation_menuCreate" "New" "plus" "basic" <|
+        UI.linkedItemsList
+            [ UI.linkedItem "New bookmark" "bookmark" ""
+            , UI.linkedItem "Create a new note" "sticky note" ""
+            ]
 
 
-view model = UI.page projectName projectLogo [tagsMenu model]
-    [ div [ style [ ( "height", "10em" ) ] ] [ text "Lorem ipsum" ]
-    , div [ class "ui three buttons" ]
-        [ button [ class "ui active button" ] [ text "One" ]
-        , button [ class "ui button" ] [ text "Two" ]
-        , button [ class "ui button" ] [ text "Three" ]
+view model =
+    UI.page projectName projectLogo
+     -- header
+        [ menuTags model
+        , menuCreate
         ]
-    ]
+     -- body
+        [ div [ style [ ( "height", "10em" ) ] ] [ text "Lorem ipsum" ]
+        , div [ class "ui buttons" ]
+            [ button [ class "ui active button" ] [ text "One" ]
+            , button [ class "ui button" ] [ text "Two" ]
+            , button [ class "ui button" ] [ text "Three" ]
+            ]
+        ]
 
 
 -- Subscriptions

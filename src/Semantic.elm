@@ -30,16 +30,17 @@ logo title icon =
 
 icon id = i [ class <| id ++ " icon" ] []
 
-linkedItemsList function items =
-    div [ class "ui link list" ] <|
-        List.map function items
+linkedItemsList items =
+    div [ class "ui link list" ] items
 
-linkedItem title url =
-    a [ class "item", href url ] [ text title ]
+linkedItem itemTitle itemIcon itemUrl =
+    a [ class "item", href itemUrl ] <|
+        if itemIcon == "" then [ text itemTitle ]
+                          else [ icon itemIcon, text itemTitle ]
 
-popupMenu menuId menuTitle menuIcon menuContent =
+popupMenu menuId menuTitle menuIcon menuType menuContent =
     span [ id menuId, class "ui dropdown item" ]
-        [ button [ id (menuId ++ "_button"), class "ui primary button big label" ]
+        [ button [ id (menuId ++ "_button"), class ("ui " ++ menuType ++ " button big label") ]
             [ icon menuIcon
             , text menuTitle
             ]
