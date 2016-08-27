@@ -1,3 +1,4 @@
 elm-stuff
 assets/node_modules
 app
+server/config.php
