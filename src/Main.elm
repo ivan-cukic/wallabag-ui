@@ -31,28 +31,29 @@ projectLogo = "assets/images/logo.svg"
 
 -- Model
 
-type alias Model =
-    { currentTag : String
-    , tags       : List Tag
-    , bookmarks  : List Bookmark
-    , loading    : Bool
-    }
-
 
 type Message
     = FetchTags
     | FetchTagsSucceed (List Tag)
     | FetchTagsFail Http.Error
 
-    | FetchBookmarks String
+    | FetchBookmarks Tag
     | FetchBookmarksSucceed (List Bookmark)
     | FetchBookmarksFail Http.Error
 
 
+type alias Model =
+    { currentTag : Tag
+    , tags       : List Tag
+    , bookmarks  : List Bookmark
+    , loading    : Bool
+    }
+
+
 init : (Model, Cmd Message)
 init =
-    ( Model "" [] [] False
-    , Cmd.batch [fetchTags, fetchBookmarks "c"]
+    ( Model Tags.none [] [] True
+    , Cmd.batch [ fetchTags ]
     )
 
 
@@ -62,10 +63,10 @@ fetchTags =
         Tags.fetchTagsTask
 
 
-fetchBookmarks: String -> Cmd Message
+fetchBookmarks: Tag -> Cmd Message
 fetchBookmarks tag =
     Task.perform FetchBookmarksFail FetchBookmarksSucceed
-        (Bookmarks.fetchBookmarksTask tag)
+        (Bookmarks.fetchBookmarksTask tag.slug)
 
 
 
@@ -92,6 +93,7 @@ update message model =
 
         FetchBookmarks tag ->
             { model | loading = True
+                    , currentTag = tag
                     , bookmarks = []
             } ! [fetchBookmarks tag]
 
@@ -114,18 +116,21 @@ splitTagsOnPopularity tags =
     List.partition (\ tag -> tag.post_count >= 3) tags
 
 
+listTags tags = List.map (\tag -> Tags.item tag (FetchBookmarks tag)) tags
+
+
 menuTags : List Tag -> Node Message
 menuTags tags =
     let (first, rest) = splitTagsOnPopularity tags
     in
     UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary" <|
-        List.map (\ tag -> Tags.item tag (FetchBookmarks tag.slug)) first ++
+        listTags first ++
         [ UI.divider
         , div [ class "ui item" ]
             [ UI.icon "dropdown"
             , text "Other tags"
             , div [ class "ui menu" ] <|
-                List.map (\ tag -> Tags.item tag (FetchBookmarks tag.slug)) rest
+                listTags rest
             ]
         , UI.divider
         , div [ class "ui item" ] [ text "Show all bookmarks" ]
@@ -142,7 +147,7 @@ menuCreate =
 
 viewBookmarks bookmarks =
     div [ class "ui divided items" ] <|
-        List.map Bookmarks.item bookmarks
+        List.map (\ bmark -> Bookmarks.item bmark FetchBookmarks) bookmarks
 
 
 header model =
@@ -154,14 +159,16 @@ header model =
 
 body model =
     UI.body <|
-        [ div [ style [ ( "height", "10em" ) ] ]
-            [ text "Lorem ipsum" ]
-        , viewBookmarks model.bookmarks
-        , div [ class "ui buttons" ]
-            [ button [ class "ui active button" ] [ text "One" ]
-            , button [ class "ui button" ] [ text "Two" ]
-            , button [ class "ui button" ] [ text "Three" ]
-            ]
+        [ div [ style [ ( "height", "10em" ) ] ] []
+        , h1 [] [ text (if (model.currentTag.slug == "") then "Tags:" else model.currentTag.title) ]
+        , if (model.currentTag.slug == "")
+             then div [ class "ui list" ] ( listTags model.tags )
+             else viewBookmarks model.bookmarks
+        -- , div [ class "ui buttons" ]
+        --     [ button [ class "ui active button" ] [ text "One" ]
+        --     , button [ class "ui button" ] [ text "Two" ]
+        --     , button [ class "ui button" ] [ text "Three" ]
+        --     ]
         ]
 
 

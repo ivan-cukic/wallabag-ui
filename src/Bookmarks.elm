@@ -43,11 +43,12 @@ fetchBookmarksTask tag =
     Http.get decodeBookmarks <| "server/query.php?tag=" ++ tag
 
 
-bookmarkTagLabel tag =
-    a [ class "ui small right ribbon label" ] [ text tag.title ]
+bookmarkTagLabel tag onTagClick =
+    -- a [] [ UI.verticalDivider "white", text tag.title ]
+    Tags.link tag onTagClick
 
 
-item bookmark =
+item bookmark onTagClick =
     div [ class "item" ]
         [ div [ class "ui small image" ]
             [ img [ src bookmark.picture ] [] ]
@@ -55,7 +56,7 @@ item bookmark =
             [ div [ class "meta" ]
                 [ span [ class "ui right ribbon label" ] <|
                     [ UI.icon "tags" ] ++
-                    (List.map ( \tag -> a [] [ UI.verticalDivider "white", text tag.title ] ) bookmark.tags)
+                    (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
                 ]
             , a [ class "header" ]
                 [ text bookmark.title ]

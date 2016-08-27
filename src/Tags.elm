@@ -1,10 +1,11 @@
 module Tags exposing
     ( item
-    , smallItem
+    , link
     , Tag
     , fetchTagsTask
     , decodeTags
     , error
+    , none
     )
 
 import Html exposing (..)
@@ -25,6 +26,7 @@ type alias Tag =
 
 
 error message = Tag "error" message 0
+none = Tag "" "" 0
 
 
 decodeTag : Json.Decoder Tag
@@ -86,10 +88,8 @@ item tag clickMessage =
         ]
 
 
-smallItem tag clickMessage =
-    a [ class "ui item label", onClick clickMessage ]
-        [ text (tag.title ++ " ")
-        , span [ class "detail" ] [ text (toString tag.post_count) ]
-        ]
+link tag clickMessage =
+    -- a [] [ UI.verticalDivider "white", text tag.title ]
+    a [ onClick clickMessage, style [ ("padding", "0 .5em") ] ] [ text tag.title ]
 
 
