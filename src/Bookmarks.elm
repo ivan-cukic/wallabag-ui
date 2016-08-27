@@ -9,7 +9,7 @@ import Json.Decode as Json
 import Json.Decode.Pipeline as JsonPipeline exposing (decode, required)
 
 import Tags
-import Semantic as UI
+import UI
 
 
 type alias Bookmark =
@@ -44,8 +44,7 @@ fetchBookmarksTask tag =
 
 
 bookmarkTagLabel tag =
-    a [ class "ui small label" ]
-        [ text tag.title ]
+    a [ class "ui small right ribbon label" ] [ text tag.title ]
 
 
 item bookmark =
@@ -53,14 +52,18 @@ item bookmark =
         [ div [ class "ui small image" ]
             [ img [ src bookmark.picture ] [] ]
         , div [ class "content" ]
-            [ a [ class "header" ]
+            [ div [ class "meta" ]
+                [ span [ class "ui right ribbon label" ] <|
+                    [ UI.icon "tags" ] ++
+                    (List.map ( \tag -> a [] [ UI.verticalDivider "white", text tag.title ] ) bookmark.tags)
+                ]
+            , a [ class "header" ]
                 [ text bookmark.title ]
-            , div [ class "meta" ]
-                ( [ UI.icon "tags" ] ++ (List.map bookmarkTagLabel bookmark.tags) )
-            , div [ class "description" ]
+            , div [ class "description", style [ ("min-height", "4em !important") ] ]
                 [ span [] [ text bookmark.content ] ]
             , div [ class "extra" ]
                 [ text bookmark.url ]
             ]
         ]
+
 

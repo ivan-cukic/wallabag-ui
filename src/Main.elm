@@ -7,7 +7,9 @@ import Html.App as Html
 import Http
 import Task
 
-import Semantic as UI
+import VirtualDom exposing (Node)
+
+import UI
 import Tags exposing (Tag)
 import Bookmarks exposing (Bookmark)
 
@@ -20,8 +22,12 @@ main =
         , subscriptions = subscriptions
         }
 
+
 projectName = "Freerange Walrus"
 projectLogo = "assets/images/logo.svg"
+
+
+
 
 -- Model
 
@@ -32,24 +38,6 @@ type alias Model =
     , loading    : Bool
     }
 
-init : (Model, Cmd Message)
-init =
-    ( Model "" [] [] False
-    , Cmd.batch [fetchTags, fetchBookmarks "c"]
-    )
-
-fetchTags: Cmd Message
-fetchTags =
-    Task.perform FetchTagsFail FetchTagsSucceed
-        Tags.fetchTagsTask
-
-fetchBookmarks: String -> Cmd Message
-fetchBookmarks tag =
-    Task.perform FetchBookmarksFail FetchBookmarksSucceed
-        (Bookmarks.fetchBookmarksTask tag)
-
-
--- Update
 
 type Message
     = FetchTags
@@ -59,6 +47,30 @@ type Message
     | FetchBookmarks String
     | FetchBookmarksSucceed (List Bookmark)
     | FetchBookmarksFail Http.Error
+
+
+init : (Model, Cmd Message)
+init =
+    ( Model "" [] [] False
+    , Cmd.batch [fetchTags, fetchBookmarks "c"]
+    )
+
+
+fetchTags: Cmd Message
+fetchTags =
+    Task.perform FetchTagsFail FetchTagsSucceed
+        Tags.fetchTagsTask
+
+
+fetchBookmarks: String -> Cmd Message
+fetchBookmarks tag =
+    Task.perform FetchBookmarksFail FetchBookmarksSucceed
+        (Bookmarks.fetchBookmarksTask tag)
+
+
+
+
+-- Update
 
 update : Message -> Model -> (Model, Cmd Message)
 update message model =
@@ -80,7 +92,7 @@ update message model =
 
         FetchBookmarks tag ->
             { model | loading = True
-                    , tags = []
+                    , bookmarks = []
             } ! [fetchBookmarks tag]
 
         FetchBookmarksSucceed newBookmarks ->
@@ -98,9 +110,27 @@ update message model =
 
 -- View
 
-menuTags model =
-    UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary"
-        <| List.map Tags.item model.tags
+splitTagsOnPopularity tags =
+    List.partition (\ tag -> tag.post_count >= 3) tags
+
+
+menuTags : List Tag -> Node Message
+menuTags tags =
+    let (first, rest) = splitTagsOnPopularity tags
+    in
+    UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary" <|
+        List.map (\ tag -> Tags.item tag (FetchBookmarks tag.slug)) first ++
+        [ UI.divider
+        , div [ class "ui item" ]
+            [ UI.icon "dropdown"
+            , text "Other tags"
+            , div [ class "ui menu" ] <|
+                List.map (\ tag -> Tags.item tag (FetchBookmarks tag.slug)) rest
+            ]
+        , UI.divider
+        , div [ class "ui item" ] [ text "Show all bookmarks" ]
+        , div [ class "ui item" ] [ text "Show bookmarks without tags" ]
+        ]
 
 
 menuCreate =
@@ -111,15 +141,16 @@ menuCreate =
 
 
 viewBookmarks bookmarks =
-    div [ class "ui items" ] <|
+    div [ class "ui divided items" ] <|
         List.map Bookmarks.item bookmarks
 
 
 header model =
     UI.header projectName projectLogo
-        [ menuTags model
+        [ menuTags model.tags
         , menuCreate
         ]
+
 
 body model =
     UI.body <|
@@ -137,8 +168,14 @@ body model =
 view model = UI.page (header model) (body model)
 
 
+
+
 -- Subscriptions
 
 subscriptions : Model -> Sub Message
 subscriptions model =
     Sub.none
+
+
+
+

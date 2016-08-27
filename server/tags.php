@@ -13,6 +13,8 @@ $query = "
             tag.slug
         from
             wallabag_tag as tag
+        order by
+            tag.label
     ";
 
 $results = $db->query($query);

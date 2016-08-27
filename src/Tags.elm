@@ -1,7 +1,15 @@
-module Tags exposing (item, Tag, fetchTagsTask, decodeTags, error)
+module Tags exposing
+    ( item
+    , smallItem
+    , Tag
+    , fetchTagsTask
+    , decodeTags
+    , error
+    )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 import Http
 
@@ -15,7 +23,9 @@ type alias Tag =
     , post_count : Int
     }
 
+
 error message = Tag "error" message 0
+
 
 decodeTag : Json.Decoder Tag
 decodeTag = decode Tag
@@ -23,13 +33,17 @@ decodeTag = decode Tag
             |> JsonPipeline.required "title" Json.string
             |> JsonPipeline.optional "post_count" Json.int 0
 
+
 decodeTags : Json.Decoder (List Tag)
 decodeTags = Json.list decodeTag
 
+
 fetchTagsTask = Http.get decodeTags "server/tags.php"
+
 
 tagLevel : Tag -> Int
 tagLevel tag = round <| logBase 2 <| toFloat tag.post_count
+
 
 tagColor : Tag -> String
 tagColor tag =
@@ -43,6 +57,7 @@ tagColor tag =
         6 -> "red"
         _ -> "black"
 
+
 tagFontSize : Tag -> Int
 tagFontSize tag =
     case tagLevel tag of
@@ -55,6 +70,7 @@ tagFontSize tag =
         6 -> 32
         _ -> 34
 
+
 tagStyle tag =
     let size = tagFontSize tag in
     style
@@ -62,10 +78,18 @@ tagStyle tag =
         , ("padding",   (toString <| size // 4) ++ "px 0")
         ]
 
-item : Tag -> Html a
-item tag =
-    a [ class "item", href tag.slug, tagStyle tag ]
-        [ span [ tagStyle tag ] [ text tag.title ]
+
+item tag clickMessage =
+    a [ class "item", tagStyle tag, onClick clickMessage ]
+        [ span [ tagStyle tag ] [ text (tag.title ++ " ") ]
         , span [ class ("ui label " ++ (tagColor tag)) ] [ text (toString tag.post_count) ]
         ]
+
+
+smallItem tag clickMessage =
+    a [ class "ui item label", onClick clickMessage ]
+        [ text (tag.title ++ " ")
+        , span [ class "detail" ] [ text (toString tag.post_count) ]
+        ]
+
 

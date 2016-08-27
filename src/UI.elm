@@ -1,4 +1,13 @@
-module Semantic exposing (page, header, body, linkedItem, popupMenu, icon)
+module UI exposing
+    ( page
+    , header
+    , body
+    , linkedItem
+    , popupMenu
+    , icon
+    , verticalDivider
+    , divider
+    )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -9,6 +18,7 @@ import VirtualDom exposing (Node)
 script' : String -> Node a
 script' s = node "script" [] [ text s ]
 
+
 initAllDropdowns : Node a
 initAllDropdowns = script' <|
         "
@@ -17,6 +27,7 @@ initAllDropdowns = script' <|
             });
         "
 
+
 logo : String -> String -> Node a
 logo title icon =
     span [ class "ui item big teal ribbon label" ]
@@ -24,14 +35,17 @@ logo title icon =
         , text title
         ]
 
+
 icon : String -> Node a
 icon id = i [ class <| id ++ " icon" ] []
+
 
 linkedItem : String -> String -> String -> Node a
 linkedItem itemTitle itemIcon itemUrl =
     a [ class "item", href itemUrl ] <|
         if itemIcon == "" then [ text itemTitle ]
                           else [ icon itemIcon, text itemTitle ]
+
 
 popupMenu : String -> String -> String -> String -> List (Node a) -> Node a
 popupMenu menuId menuTitle menuIcon menuType items =
@@ -41,12 +55,14 @@ popupMenu menuId menuTitle menuIcon menuType items =
         , div [ class "menu" ] items
         ]
 
+
 header : String -> String -> List (Node a) -> Node a
 header pageTitle pageIcon menus =
     div [ class "ui computer tablet only row" ]
-        [ div [ class "ui large fixed menu navbar page grid" ]
+        [ div [ class "ui large fixed inverted menu navbar page grid" ]
             ( [ logo pageTitle pageIcon ] ++ menus )
         ]
+
 
 body : List (Node a) -> Node a
 body items =
@@ -65,23 +81,15 @@ page header items =
         , initAllDropdowns ]
 
 
+verticalDivider color =
+    span [
+        style
+            [ ( "color", color )
+            , ( "padding", "0 .5em" )
+            ]
+        ]
+        [ text "|" ]
 
--- items : Node a ->
 
-
-
--- initDropdown id buttonId = script' <|
---         "
---             $('#" ++ id ++ "').dropdown({
---                 on: 'hover',
---                 onShow: function() {
---                     $('#" ++ buttonId ++ "').addClass('pointing');
---                     $('#" ++ buttonId ++ "').addClass('below');
---                 },
---                 onHide: function() {
---                     $('#" ++ buttonId ++ "').removeClass('pointing');
---                     $('#" ++ buttonId ++ "').removeClass('below');
---                 }
---             });
---         "
+divider = div [ class "divider" ] []
 
