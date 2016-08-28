@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -14,6 +14,9 @@ import UI
 import Tags exposing (Tag)
 import Bookmarks exposing (Bookmark)
 
+import Json.Encode as JsonEnc
+import Json.Decode as JsonDec
+import Json.Decode.Pipeline as JsonPipeline exposing (decode, required)
 
 main =
     Html.program
@@ -44,29 +47,45 @@ type Message
 
     | SetViewMode ViewMode
 
+    | SaveState
+    | LoadState String
+
 type ViewMode
     = ListView
     | CardView
 
 type alias Model =
-    { currentTag : Tag
-    , tags       : List Tag
-    , bookmarks  : List Bookmark
-    , loading    : Bool
-    , viewMode   : ViewMode
+    { currentTag  : Tag
+    , tags        : List Tag
+    , bookmarks   : List Bookmark
+    , loading     : Bool
+    , viewMode    : ViewMode
+    , errorString : String
     }
 
-
-init : (Model, Cmd Message)
-init =
-    ( Model
+defaultModel =
+    Model
           Tags.none
           []
           []
           True
           ListView
-    , Cmd.batch [ fetchTags ]
-    )
+          ""
+
+
+errorModel error =
+    Model
+          Tags.none
+          []
+          []
+          True
+          ListView
+          error
+
+
+
+init : (Model, Cmd Message)
+init = (defaultModel, Cmd.batch [ fetchTags ] )
 
 
 fetchTags: Cmd Message
@@ -81,7 +100,50 @@ fetchBookmarks tag =
         (Bookmarks.fetchBookmarksTask tag.slug)
 
 
+-- Storage
 
+port save : String -> Cmd msg
+port load : (String -> msg) -> Sub msg
+
+serializeState : Model -> String
+serializeState model =
+    JsonEnc.encode 0 <| JsonEnc.object
+        [ ("tagSlug"  , JsonEnc.string model.currentTag.slug)
+        , ("tagTitle" , JsonEnc.string model.currentTag.title)
+        , ("viewMode" , JsonEnc.string (toString model.viewMode))
+        ]
+
+type alias State =
+    { tagSlug     : String
+    , tagTitle    : String
+    , viewMode    : String
+    }
+
+decodeState : JsonDec.Decoder State
+decodeState = decode State
+              |> JsonPipeline.required "tagSlug"  JsonDec.string
+              |> JsonPipeline.required "tagTitle" JsonDec.string
+              |> JsonPipeline.required "viewMode" JsonDec.string
+
+modelFromState : State -> Model
+modelFromState state =
+    Model (Tags.tag state.tagSlug state.tagTitle)
+          []
+          []
+          False
+          ( if state.viewMode == "CardView" then CardView else ListView )
+          "Loaded"
+
+
+deserializeState : String -> Model
+deserializeState data =
+    case JsonDec.decodeString decodeState data of
+        Err err -> errorModel (toString err)
+        Ok state -> modelFromState state
+
+
+saveState : Model -> Cmd msg
+saveState model = save <| serializeState model
 
 -- Update
 
@@ -112,7 +174,7 @@ update message model =
         FetchBookmarksSucceed newBookmarks ->
             { model | loading = False
                     , bookmarks = newBookmarks
-            } ! []
+            } ! [saveState model]
 
         FetchBookmarksFail error ->
             { model | loading = False
@@ -120,9 +182,15 @@ update message model =
             } ! []
 
         SetViewMode mode ->
-            { model | viewMode = mode
-            } ! []
+            let newModel = { model | viewMode = mode }
+            in newModel ! [saveState newModel]
 
+        SaveState ->
+            model ! [ saveState model ]
+
+        LoadState data ->
+            let newModel = deserializeState data
+            in newModel ! [fetchBookmarks newModel.currentTag]
 
 
 -- View
@@ -187,7 +255,7 @@ header model =
 
 
 tagsBreadcrumb model =
-    div [ class "ui massive breadcrumb", style [ ("padding-bottom", "1em") ] ] <|
+    div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
     if (model.currentTag.slug == "")
         then [ text "Tags:" ]
         else [ a [ onClick (FetchBookmarks Tags.none) ] [ text "Tags" ]
@@ -199,8 +267,14 @@ tagsBreadcrumb model =
 body model =
     UI.body <|
         [ div [ style [ ( "height", "10em" ) ] ] []
+        , div [] <|
+            if (model.errorString == "")
+            then
+                []
+            else
+                [ div [ class "ui red segment" ] [ text model.errorString ] ]
+
         , tagsBreadcrumb model
-        -- , h1 [] [ text (if (model.currentTag.slug == "") then "Tags:" else model.currentTag.title) ]
         , if (model.currentTag.slug == "")
              then div [ class "ui list" ] ( listTags model.tags )
              else viewBookmarks model
@@ -216,7 +290,7 @@ view model = UI.page (header model) (body model)
 
 subscriptions : Model -> Sub Message
 subscriptions model =
-    Sub.none
+    load LoadState
 
 
 

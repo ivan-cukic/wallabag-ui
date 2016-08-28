@@ -25,7 +25,19 @@
 </body>
 
 <script type="text/javascript">
-    Elm.Main.fullscreen();
+    var storageKey = "walrusState";
+    var app = Elm.Main.fullscreen();
+
+    app.ports.save.subscribe(function(value) {
+        localStorage.setItem(storageKey, value);
+    });
+
+    var value = localStorage.getItem(storageKey);
+    if (value === null) {
+        app.ports.load.send("");
+    } else {
+        app.ports.load.send(value);
+    }
 </script>
 
 </html>
