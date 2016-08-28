@@ -55,12 +55,12 @@ type ViewMode
     | CardView
 
 type alias Model =
-    { currentTag  : Tag
-    , tags        : List Tag
-    , bookmarks   : List Bookmark
-    , loading     : Bool
-    , viewMode    : ViewMode
-    , errorString : String
+    { currentTag    : Tag
+    , tags          : List Tag
+    , bookmarks     : List Bookmark
+    , loading       : Bool
+    , viewMode      : ViewMode
+    , messageString : String
     }
 
 defaultModel =
@@ -132,13 +132,13 @@ modelFromState state =
           []
           False
           ( if state.viewMode == "CardView" then CardView else ListView )
-          "Loaded"
+          ""
 
 
 deserializeState : String -> Model
 deserializeState data =
     case JsonDec.decodeString decodeState data of
-        Err err -> errorModel (toString err)
+        Err err -> errorModel ("Error loading the saved data" ++ toString err)
         Ok state -> modelFromState state
 
 
@@ -162,7 +162,8 @@ update message model =
 
         FetchTagsFail error ->
             { model | loading = False
-                    , tags = [ Tags.error (toString error) ]
+                    , tags = []
+                    , messageString = "Failed to fetch tags: " ++ (toString error)
             } ! []
 
         FetchBookmarks tag ->
@@ -174,11 +175,13 @@ update message model =
         FetchBookmarksSucceed newBookmarks ->
             { model | loading = False
                     , bookmarks = newBookmarks
+                    , messageString = if (List.length newBookmarks == 0 && model.currentTag.slug /= "") then "There are no bookmarks that have this tag" else ""
             } ! [saveState model]
 
         FetchBookmarksFail error ->
             { model | loading = False
-                    , bookmarks = [ Bookmarks.error (toString error) ]
+                    , bookmarks = []
+                    , messageString = "Failed to fetch bookmarks for this tag: " ++ (toString error)
             } ! []
 
         SetViewMode mode ->
@@ -257,7 +260,9 @@ header model =
 tagsBreadcrumb model =
     div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
     if (model.currentTag.slug == "")
-        then [ text "Tags:" ]
+        then [ text "Tags"
+             , UI.icon "divider right chevron"
+             ]
         else [ a [ onClick (FetchBookmarks Tags.none) ] [ text "Tags" ]
              , UI.icon "divider right chevron"
              , text model.currentTag.title
@@ -268,11 +273,11 @@ body model =
     UI.body <|
         [ div [ style [ ( "height", "10em" ) ] ] []
         , div [] <|
-            if (model.errorString == "")
+            if (model.messageString == "")
             then
                 []
             else
-                [ div [ class "ui red segment" ] [ text model.errorString ] ]
+                [ div [ class "ui red segment" ] [ text model.messageString ] ]
 
         , tagsBreadcrumb model
         , if (model.currentTag.slug == "")
@@ -291,7 +296,6 @@ view model = UI.page (header model) (body model)
 subscriptions : Model -> Sub Message
 subscriptions model =
     load LoadState
-
 
 
 
