@@ -1,4 +1,10 @@
-module Bookmarks exposing (item, Bookmark, fetchBookmarksTask, error)
+module Bookmarks exposing
+    ( item
+    , cardItem
+    , Bookmark
+    , fetchBookmarksTask
+    , error
+    )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -67,4 +73,26 @@ item bookmark onTagClick =
             ]
         ]
 
+
+cardItem bookmark onTagClick =
+    div [ class "ui card" ]
+        [ div [ class "image" ]
+            [ img [ src bookmark.picture ] []
+            , span [ class "ui right ribbon label" ] <|
+                  -- [ UI.icon "tags" ] ++
+                  (List.map (\tag -> div [ attribute "style" "white-space: nowrap" ] [ UI.icon "tag", bookmarkTagLabel tag (onTagClick tag) ]) bookmark.tags)
+            ]
+        , div [ class "content" ]
+            [ div [ class "header" ] [ a [ href bookmark.url, target "_blank" ] [ text bookmark.title ] ]
+            -- , div [ class "meta" ] [ a [ href bookmark.url, target "_blank" ] [] ]
+            -- , div [ class "meta" ]
+            --     [ span [ class "ui right ribbon label" ] <|
+            --         [ UI.icon "tags" ] ++
+            --         (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
+            --     ]
+            , div [ class "description" ] [ text bookmark.content ]
+            ]
+        , div [ class "extra content", style [ ("text-overflow", "ellipsis"), ("overflow", "hidden") ] ]
+            [ text bookmark.url ]
+        ]
 

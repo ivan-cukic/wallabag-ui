@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Html.App as Html
 
 import Http
@@ -41,18 +42,29 @@ type Message
     | FetchBookmarksSucceed (List Bookmark)
     | FetchBookmarksFail Http.Error
 
+    | SetViewMode ViewMode
+
+type ViewMode
+    = ListView
+    | CardView
 
 type alias Model =
     { currentTag : Tag
     , tags       : List Tag
     , bookmarks  : List Bookmark
     , loading    : Bool
+    , viewMode   : ViewMode
     }
 
 
 init : (Model, Cmd Message)
 init =
-    ( Model Tags.none [] [] True
+    ( Model
+          Tags.none
+          []
+          []
+          True
+          ListView
     , Cmd.batch [ fetchTags ]
     )
 
@@ -107,6 +119,9 @@ update message model =
                     , bookmarks = [ Bookmarks.error (toString error) ]
             } ! []
 
+        SetViewMode mode ->
+            { model | viewMode = mode
+            } ! []
 
 
 
@@ -145,30 +160,50 @@ menuCreate =
         ]
 
 
-viewBookmarks bookmarks =
+viewBookmarkList bookmarks =
     div [ class "ui divided items" ] <|
         List.map (\ bmark -> Bookmarks.item bmark FetchBookmarks) bookmarks
+
+
+viewBookmarkCards bookmarks =
+    div [ class "ui link cards" ] <|
+        List.map (\ bmark -> Bookmarks.cardItem bmark FetchBookmarks) bookmarks
+
+
+viewBookmarks model =
+    if model.viewMode == ListView then viewBookmarkList model.bookmarks
+                                  else viewBookmarkCards model.bookmarks
 
 
 header model =
     UI.header projectName projectLogo
         [ menuTags model.tags
         , menuCreate
+        , div [ class "ui right inverted menu" ]
+            [ a [ class "ui item", onClick (SetViewMode ListView) ] [ UI.icon "list layout" ]
+            , a [ class "ui item", onClick (SetViewMode CardView) ] [ UI.icon "block layout" ]
+            ]
         ]
+
+
+tagsBreadcrumb model =
+    div [ class "ui massive breadcrumb", style [ ("padding-bottom", "1em") ] ] <|
+    if (model.currentTag.slug == "")
+        then [ text "Tags:" ]
+        else [ a [ onClick (FetchBookmarks Tags.none) ] [ text "Tags" ]
+             , UI.icon "divider right chevron"
+             , text model.currentTag.title
+             ]
 
 
 body model =
     UI.body <|
         [ div [ style [ ( "height", "10em" ) ] ] []
-        , h1 [] [ text (if (model.currentTag.slug == "") then "Tags:" else model.currentTag.title) ]
+        , tagsBreadcrumb model
+        -- , h1 [] [ text (if (model.currentTag.slug == "") then "Tags:" else model.currentTag.title) ]
         , if (model.currentTag.slug == "")
              then div [ class "ui list" ] ( listTags model.tags )
-             else viewBookmarks model.bookmarks
-        -- , div [ class "ui buttons" ]
-        --     [ button [ class "ui active button" ] [ text "One" ]
-        --     , button [ class "ui button" ] [ text "Two" ]
-        --     , button [ class "ui button" ] [ text "Three" ]
-        --     ]
+             else viewBookmarks model
         ]
 
 
