@@ -21,19 +21,19 @@ The focus of the project is to provide a complete tag-oriented single-user bookm
 The main aims of the project:
 
 - Provide a tag-based bookmark listing
-  (something that is still missing in Wallabag 2.x)
+  (something that is still missing in Wallabag 2.x);
 - Easy bookmark tagging
-- Provide different layouts when listing the bookmarks
-  (the default Wallabag UI provides only the card layout)
+- Provide different layouts when listing the bookmarks;
+  (the default Wallabag UI provides only the card layout).
 
 This project is **not** about:
 
 - Providing the whole reimplementation of Wallabag.
   You still need a Wallabag instance installed;
 - Providing user authentication
-  (you can do this with HTTP auth mechanism if you need it)
+  (you can do this with HTTP auth mechanism if you need it);
 - It provides no API for 3rd party applications
-  (Wallabag already provides this)
+  (Wallabag already provides this).
 
 Release
 -------
