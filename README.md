@@ -16,10 +16,24 @@ but it misses the mark on some of the
 most important ones.
 
 This is the reason why this project (codename Freerange Walrus) was born.
-The focus of the project is to provide a complete single-user bookmarking system.
+The focus of the project is to provide a complete tag-oriented single-user bookmarking system.
 
-- Provide a tag-based bookmark listing (something that is still missing in Wallabag 2.x)
-- Provide different layouts when listing the bookmarks (the default Wallabag UI provides only the card layout)
+The main aims of the project:
+
+- Provide a tag-based bookmark listing
+  (something that is still missing in Wallabag 2.x)
+- Easy bookmark tagging
+- Provide different layouts when listing the bookmarks
+  (the default Wallabag UI provides only the card layout)
+
+This project is **not** about:
+
+- Providing the whole reimplementation of Wallabag.
+  You still need a Wallabag instance installed;
+- Providing user authentication
+  (you can do this with HTTP auth mechanism if you need it)
+- It provides no API for 3rd party applications
+  (Wallabag already provides this)
 
 Release
 -------
@@ -36,3 +50,9 @@ Building
 --------
 
 If you want to build it, just clone it and type `make`. (you'll need ELM installed)
+
+Licensing
+---------
+
+The code is published under the [GNU Affero General Public License 3 or later](https://www.gnu.org/licenses/agpl-3.0.en.html)
+
