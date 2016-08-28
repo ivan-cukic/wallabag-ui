@@ -1,6 +1,8 @@
 
 An alternative UI for Wallabag
 
+![Screenshot](https://raw.githubusercontent.com/ivan-cukic/wallabag-ui/master/assets/images/screenshot.png)
+
 Freerange Walrus
 ================
 
@@ -27,7 +29,7 @@ The code is under development. I'll post the packages and the installation instr
 Implementation
 --------------
 
-Freerange Walrus is implemented in the ELM programming language, with a few server-side PHP scripts. 
+Freerange Walrus is implemented in the ELM programming language, with a few server-side PHP scripts.
 It uses the great Semantic UI framework for the visuals.
 
 Building
