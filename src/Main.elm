@@ -45,42 +45,46 @@ type Message
     | FetchBookmarksSucceed (List Bookmark)
     | FetchBookmarksFail Http.Error
 
-    | SetViewMode ViewMode
+    | SetViewMode BookmarkViewMode
 
     | SaveState
     | LoadState String
 
-type ViewMode
-    = ListView
-    | CardView
+type BookmarkViewMode
+    = ListViewMode
+    | CardViewMode
+
+type Showing
+    = ShowingNothing
+    | ShowingTags
+    | ShowingBookmarks
 
 type alias Model =
-    { currentTag    : Tag
-    , tags          : List Tag
-    , bookmarks     : List Bookmark
-    , loading       : Bool
-    , viewMode      : ViewMode
-    , messageString : String
+    { showing          : Showing
+    , loading          : Bool
+    , messageString    : String
+
+    , currentTag       : Tag
+    , tags             : List Tag
+
+    , bookmarks        : List Bookmark
+    , bookmarkViewMode : BookmarkViewMode
     }
 
-defaultModel =
+messageModel message =
     Model
-          Tags.none
-          []
-          []
-          True
-          ListView
-          ""
+          ShowingTags   -- showing
+          True          -- loading
+          message       -- messageString
+
+          Tags.none     -- there is no current tag
+          []            -- there are no tags
+
+          []            -- and no bookmarks
+          ListViewMode  -- and, by default, we want the list view
 
 
-errorModel error =
-    Model
-          Tags.none
-          []
-          []
-          True
-          ListView
-          error
+defaultModel = messageModel ""
 
 
 
@@ -110,35 +114,32 @@ serializeState model =
     JsonEnc.encode 0 <| JsonEnc.object
         [ ("tagSlug"  , JsonEnc.string model.currentTag.slug)
         , ("tagTitle" , JsonEnc.string model.currentTag.title)
-        , ("viewMode" , JsonEnc.string (toString model.viewMode))
+        , ("bookmarkViewMode" , JsonEnc.string (toString model.bookmarkViewMode))
         ]
 
 type alias State =
-    { tagSlug     : String
-    , tagTitle    : String
-    , viewMode    : String
+    { tagSlug          : String
+    , tagTitle         : String
+    , bookmarkViewMode : String
     }
 
 decodeState : JsonDec.Decoder State
 decodeState = decode State
               |> JsonPipeline.required "tagSlug"  JsonDec.string
               |> JsonPipeline.required "tagTitle" JsonDec.string
-              |> JsonPipeline.required "viewMode" JsonDec.string
+              |> JsonPipeline.required "bookmarkViewMode" JsonDec.string
 
 modelFromState : State -> Model
 modelFromState state =
-    Model (Tags.tag state.tagSlug state.tagTitle)
-          []
-          []
-          False
-          ( if state.viewMode == "CardView" then CardView else ListView )
-          ""
+    { defaultModel | currentTag = Tags.tag state.tagSlug state.tagTitle
+                   , bookmarkViewMode = if state.bookmarkViewMode == "CardViewMode" then CardViewMode else ListViewMode
+    }
 
 
 deserializeState : String -> Model
 deserializeState data =
     case JsonDec.decodeString decodeState data of
-        Err err -> errorModel ("Error loading the saved data" ++ toString err)
+        Err err -> messageModel ("Error loading the saved data: " ++ toString err)
         Ok state -> modelFromState state
 
 
@@ -175,7 +176,7 @@ update message model =
         FetchBookmarksSucceed newBookmarks ->
             { model | loading = False
                     , bookmarks = newBookmarks
-                    , messageString = if (List.length newBookmarks == 0 && model.currentTag.slug /= "") then "There are no bookmarks that have this tag" else ""
+                    , messageString = if List.length newBookmarks == 0 && model.currentTag.slug /= "" then "There are no bookmarks that have this tag" else ""
             } ! [saveState model]
 
         FetchBookmarksFail error ->
@@ -185,7 +186,7 @@ update message model =
             } ! []
 
         SetViewMode mode ->
-            let newModel = { model | viewMode = mode }
+            let newModel = { model | bookmarkViewMode = mode }
             in newModel ! [saveState newModel]
 
         SaveState ->
@@ -242,8 +243,8 @@ viewBookmarkCards bookmarks =
 
 
 viewBookmarks model =
-    if model.viewMode == ListView then viewBookmarkList model.bookmarks
-                                  else viewBookmarkCards model.bookmarks
+    if model.bookmarkViewMode == ListViewMode then viewBookmarkList model.bookmarks
+                                              else viewBookmarkCards model.bookmarks
 
 
 header model =
@@ -251,15 +252,15 @@ header model =
         [ menuTags model.tags
         , menuCreate
         , div [ class "ui right inverted menu" ]
-            [ a [ class "ui item", onClick (SetViewMode ListView) ] [ UI.icon "list layout" ]
-            , a [ class "ui item", onClick (SetViewMode CardView) ] [ UI.icon "block layout" ]
+            [ a [ class "ui item", onClick (SetViewMode ListViewMode) ] [ UI.icon "list layout" ]
+            , a [ class "ui item", onClick (SetViewMode CardViewMode) ] [ UI.icon "block layout" ]
             ]
         ]
 
 
 tagsBreadcrumb model =
     div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
-    if (model.currentTag.slug == "")
+    if model.currentTag.slug == ""
         then [ text "Tags"
              , UI.icon "divider right chevron"
              ]
@@ -273,14 +274,14 @@ body model =
     UI.body <|
         [ div [ style [ ( "height", "10em" ) ] ] []
         , div [] <|
-            if (model.messageString == "")
+            if model.messageString == ""
             then
                 []
             else
                 [ div [ class "ui red segment" ] [ text model.messageString ] ]
 
         , tagsBreadcrumb model
-        , if (model.currentTag.slug == "")
+        , if model.currentTag.slug == ""
              then div [ class "ui list" ] ( listTags model.tags )
              else viewBookmarks model
         ]
