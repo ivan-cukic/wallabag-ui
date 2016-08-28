@@ -234,7 +234,7 @@ menuCreate =
 
 viewBookmarkList bookmarks =
     div [ class "ui divided items" ] <|
-        List.map (\ bmark -> Bookmarks.item bmark FetchBookmarks) bookmarks
+        List.map (\ bmark -> Bookmarks.listItem bmark FetchBookmarks) bookmarks
 
 
 viewBookmarkCards bookmarks =

@@ -1,5 +1,5 @@
 module Bookmarks exposing
-    ( item
+    ( listItem
     , cardItem
     , Bookmark
     , fetchBookmarksTask
@@ -54,7 +54,7 @@ bookmarkTagLabel tag onTagClick =
     Tags.link tag onTagClick
 
 
-item bookmark onTagClick =
+listItem bookmark onTagClick =
     div [ class "item" ]
         [ div [ class "ui small image" ]
             [ img [ src bookmark.picture ] [] ]
@@ -64,7 +64,7 @@ item bookmark onTagClick =
                     [ UI.icon "tags" ] ++
                     (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
                 ]
-            , a [ class "header" ]
+            , a [ class "header", href bookmark.url ]
                 [ text bookmark.title ]
             , div [ class "description", style [ ("min-height", "4em !important") ] ]
                 [ span [] [ text bookmark.content ] ]
