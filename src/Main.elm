@@ -18,6 +18,7 @@ import UI
 import Tags exposing (Tag)
 import Bookmarks exposing (Bookmark)
 import Model
+import Utils
 
 main =
     Html.program
@@ -106,10 +107,11 @@ update message model =
             } ! []
 
         ShowAllTags ->
-            { model | loading = False
-                    , showing = Model.ShowingTags
-            } ! []
-
+            let newModel =
+                { model | loading = False
+                        , showing = Model.ShowingTags
+                }
+            in newModel ! [Model.saveState newModel]
 
         ShowBookmarksForTag tag ->
             { model | loading = True
@@ -154,7 +156,17 @@ update message model =
 
         LoadState data ->
             let newModel = Model.deserializeState data
-            in newModel ! [showBookmarksForTag (Maybe.withDefault (Tag "" "" 0) (Model.currentTag newModel))]
+            in newModel !
+                case newModel.showing of
+                    Model.ShowingTags ->
+                        [ Utils.emit ShowAllTags ]
+                    Model.ShowingBookmarksForTag tag ->
+                        [ showBookmarksForTag tag ]
+                    Model.ShowingUntaggedBookmarks ->
+                        [ showUntaggedBookmarks ]
+                    Model.ShowingAllBookmarks ->
+                        [ showAllBookmarks ]
+                    _ -> []
 
 
 -- View
@@ -235,9 +247,6 @@ tagsBreadcrumb model =
                 [ a [ onClick ShowAllTags ] [ text "Tags" ]
                 , UI.icon "divider right chevron"
                 , text tag.title
-                       -- <| Maybe.withDefault ""
-                       -- <| Maybe.map (\tag -> tag.title)
-                       -- <| Model.currentTag model
                 ]
 
             Model.ShowingUntaggedBookmarks ->

@@ -145,9 +145,13 @@ modelFromState state =
 
 deserializeState : String -> Model
 deserializeState data =
-    case JsonDec.decodeString decodeState data of
-        Err err -> messageModel ("Error loading the saved data: " ++ toString err)
-        Ok state -> modelFromState state
+    if data == ""
+        then default
+        else case JsonDec.decodeString decodeState data of
+            Err err ->
+                messageModel <|
+                    "Error loading the saved data: " ++ toString err ++ " data = [" ++ data ++ "]"
+            Ok state -> modelFromState state
 
 
 saveState : Model -> Cmd msg
