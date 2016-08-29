@@ -6,13 +6,18 @@ include('config.php');
 
 $db = new SQLite3($sqlite_database_file, SQLITE3_OPEN_READONLY);
 
-$tag = $_GET['tag'];
+$tag      = $_GET['tag'];
+$all      = isset($_GET['all']);
+$untagged = isset($_GET['untagged']);
 
 if (strpos($tag, "'") !== false) {
     exit;
 }
 
-$query = "
+$query = "";
+
+if ($tag != "") {
+    $query = "
         select
             entry.id,
             entry.title,
@@ -33,7 +38,46 @@ $query = "
                     where
                         et.entry_id = entry.id
                 )
-    ";
+        ";
+
+} else if ($all) {
+    $query = "
+        select
+            entry.id,
+            entry.title,
+            entry.url,
+            substr(entry.content, 0, 500) as content,
+            entry.preview_picture as picture
+        from
+            wallabag_entry as entry
+        ";
+
+} else if ($untagged) {
+    $query = "
+        select
+            entry.id,
+            entry.title,
+            entry.url,
+            substr(entry.content, 0, 500) as content,
+            entry.preview_picture as picture
+        from
+            wallabag_entry as entry
+        where
+            0 =
+                (
+                    select
+                        count(tag.slug)
+                    from
+                        wallabag_tag as tag
+                            join
+                        wallabag_entry_tag as et on et.tag_id = tag.id
+                    where
+                        et.entry_id = entry.id
+                )
+        ";
+
+
+}
 
 $results = $db->query($query);
 

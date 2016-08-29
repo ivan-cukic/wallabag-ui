@@ -183,8 +183,12 @@ menuTags tags =
                 listTags rest
             ]
         , UI.divider
-        , div [ class "ui item" ] [ text "Show all bookmarks" ]
-        , div [ class "ui item" ] [ text "Show bookmarks without tags" ]
+        , div [ class "ui item", onClick ShowAllBookmarks ]
+            [ text "Show all bookmarks"
+            ]
+        , div [ class "ui item", onClick ShowUntaggedBookmarks ]
+            [ text "Show bookmarks without tags"
+            ]
         ]
 
 
@@ -219,20 +223,34 @@ header model =
         ]
 
 
--- tagsBreadcrumb : Model.Model -> Node Message
 tagsBreadcrumb model =
     div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
-    if Model.showingTags model
-        then [ text "Tags"
-             , UI.icon "divider right chevron"
-             ]
-        else [ a [
-                  onClick ShowAllTags
-        ] [ text "Tags" ]
-             , UI.icon "divider right chevron"
-             , text <| Maybe.withDefault ""
-                    <| Maybe.map (\tag -> tag.title) <| Model.currentTag model
-             ]
+        case model.showing of
+            Model.ShowingTags ->
+                [ text "Tags"
+                , UI.icon "divider right chevron"
+                ]
+
+            Model.ShowingBookmarksForTag tag ->
+                [ a [ onClick ShowAllTags ] [ text "Tags" ]
+                , UI.icon "divider right chevron"
+                , text tag.title
+                       -- <| Maybe.withDefault ""
+                       -- <| Maybe.map (\tag -> tag.title)
+                       -- <| Model.currentTag model
+                ]
+
+            Model.ShowingUntaggedBookmarks ->
+                [ text "Bookmarks which are not tagged"
+                , UI.icon "divider right chevron"
+                ]
+
+            Model.ShowingAllBookmarks ->
+                [ text "All bookmarks"
+                , UI.icon "divider right chevron"
+                ]
+
+            _ -> []
 
 
 body : Model.Model -> Node Message
