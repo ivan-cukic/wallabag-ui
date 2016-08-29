@@ -4,8 +4,8 @@ module Tags exposing
     , Tag
     , fetchTagsTask
     , decodeTags
-    , error
-    , none
+    -- , error
+    -- , none
     , tag
     )
 
@@ -26,9 +26,9 @@ type alias Tag =
     }
 
 
-error message  = Tag "error" message 0
-none           = Tag "" "" 0
-tag slug title = Tag slug title 0
+-- error message  = Tag "error" message 0
+-- none           = Tag "" "" 0
+tag slug title = if slug == "" then Nothing else Just (Tag slug title 0)
 
 
 decodeTag : Json.Decoder Tag

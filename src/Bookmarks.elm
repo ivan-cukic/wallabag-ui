@@ -2,7 +2,9 @@ module Bookmarks exposing
     ( listItem
     , cardItem
     , Bookmark
-    , fetchBookmarksTask
+    , fetchBookmarksForTagTask
+    , fetchAllBookmarksTask
+    , fetchUntaggedBookmarksTask
     , error
     )
 
@@ -45,8 +47,19 @@ decodeBookmarks : Json.Decoder (List Bookmark)
 decodeBookmarks = Json.list decodeBookmark
 
 
-fetchBookmarksTask tag =
+fetchBookmarksForTagTask : String -> Platform.Task Http.Error (List Bookmark)
+fetchBookmarksForTagTask tag =
     Http.get decodeBookmarks <| "server/query.php?tag=" ++ tag
+
+
+fetchAllBookmarksTask : Platform.Task Http.Error (List Bookmark)
+fetchAllBookmarksTask =
+    Http.get decodeBookmarks "server/query.php?all"
+
+
+fetchUntaggedBookmarksTask : Platform.Task Http.Error (List Bookmark)
+fetchUntaggedBookmarksTask =
+    Http.get decodeBookmarks "server/query.php?untagged"
 
 
 bookmarkTagLabel tag onTagClick =
@@ -54,6 +67,7 @@ bookmarkTagLabel tag onTagClick =
     Tags.link tag onTagClick
 
 
+-- listItem : Bookmark -> (a -> Message) -> Node Message
 listItem bookmark onTagClick =
     div [ class "item" ]
         [ div [ class "ui small image" ]

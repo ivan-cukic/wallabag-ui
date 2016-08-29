@@ -10,13 +10,14 @@ import Task
 
 import VirtualDom exposing (Node)
 
-import UI
-import Tags exposing (Tag)
-import Bookmarks exposing (Bookmark)
-
 import Json.Encode as JsonEnc
 import Json.Decode as JsonDec
 import Json.Decode.Pipeline as JsonPipeline exposing (decode, required)
+
+import UI
+import Tags exposing (Tag)
+import Bookmarks exposing (Bookmark)
+import Model
 
 main =
     Html.program
@@ -32,64 +33,10 @@ projectLogo = "assets/images/logo.svg"
 
 
 
+-- Tasks
 
--- Model
-
-
-type Message
-    = FetchTags
-    | FetchTagsSucceed (List Tag)
-    | FetchTagsFail Http.Error
-
-    | FetchBookmarks Tag
-    | FetchBookmarksSucceed (List Bookmark)
-    | FetchBookmarksFail Http.Error
-
-    | SetViewMode BookmarkViewMode
-
-    | SaveState
-    | LoadState String
-
-type BookmarkViewMode
-    = ListViewMode
-    | CardViewMode
-
-type Showing
-    = ShowingNothing
-    | ShowingTags
-    | ShowingBookmarks
-
-type alias Model =
-    { showing          : Showing
-    , loading          : Bool
-    , messageString    : String
-
-    , currentTag       : Tag
-    , tags             : List Tag
-
-    , bookmarks        : List Bookmark
-    , bookmarkViewMode : BookmarkViewMode
-    }
-
-messageModel message =
-    Model
-          ShowingTags   -- showing
-          True          -- loading
-          message       -- messageString
-
-          Tags.none     -- there is no current tag
-          []            -- there are no tags
-
-          []            -- and no bookmarks
-          ListViewMode  -- and, by default, we want the list view
-
-
-defaultModel = messageModel ""
-
-
-
-init : (Model, Cmd Message)
-init = (defaultModel, Cmd.batch [ fetchTags ] )
+init : (Model.Model, Cmd Message)
+init = (Model.default, Cmd.batch [ fetchTags ] )
 
 
 fetchTags: Cmd Message
@@ -98,118 +45,134 @@ fetchTags =
         Tags.fetchTagsTask
 
 
-fetchBookmarks: Tag -> Cmd Message
-fetchBookmarks tag =
-    Task.perform FetchBookmarksFail FetchBookmarksSucceed
-        (Bookmarks.fetchBookmarksTask tag.slug)
+showBookmarksForTag: Tag -> Cmd Message
+showBookmarksForTag tag =
+    Task.perform FetchBookmarksFail FetchBookmarksSucceed <|
+        Bookmarks.fetchBookmarksForTagTask tag.slug
 
 
--- Storage
-
-port save : String -> Cmd msg
-port load : (String -> msg) -> Sub msg
-
-serializeState : Model -> String
-serializeState model =
-    JsonEnc.encode 0 <| JsonEnc.object
-        [ ("tagSlug"  , JsonEnc.string model.currentTag.slug)
-        , ("tagTitle" , JsonEnc.string model.currentTag.title)
-        , ("bookmarkViewMode" , JsonEnc.string (toString model.bookmarkViewMode))
-        ]
-
-type alias State =
-    { tagSlug          : String
-    , tagTitle         : String
-    , bookmarkViewMode : String
-    }
-
-decodeState : JsonDec.Decoder State
-decodeState = decode State
-              |> JsonPipeline.required "tagSlug"  JsonDec.string
-              |> JsonPipeline.required "tagTitle" JsonDec.string
-              |> JsonPipeline.required "bookmarkViewMode" JsonDec.string
-
-modelFromState : State -> Model
-modelFromState state =
-    { defaultModel | currentTag = Tags.tag state.tagSlug state.tagTitle
-                   , bookmarkViewMode = if state.bookmarkViewMode == "CardViewMode" then CardViewMode else ListViewMode
-    }
+showUntaggedBookmarks: Cmd Message
+showUntaggedBookmarks =
+    Task.perform FetchBookmarksFail FetchBookmarksSucceed <|
+        Bookmarks.fetchUntaggedBookmarksTask
 
 
-deserializeState : String -> Model
-deserializeState data =
-    case JsonDec.decodeString decodeState data of
-        Err err -> messageModel ("Error loading the saved data: " ++ toString err)
-        Ok state -> modelFromState state
+showAllBookmarks: Cmd Message
+showAllBookmarks =
+    Task.perform FetchBookmarksFail FetchBookmarksSucceed <|
+        Bookmarks.fetchAllBookmarksTask
 
-
-saveState : Model -> Cmd msg
-saveState model = save <| serializeState model
 
 -- Update
 
-update : Message -> Model -> (Model, Cmd Message)
+type Message
+    = FetchTags
+    | FetchTagsSucceed (List Tag)
+    | FetchTagsFail Http.Error
+
+    | ShowAllTags
+
+    | ShowBookmarksForTag Tag
+    | ShowUntaggedBookmarks
+    | ShowAllBookmarks
+    | FetchBookmarksSucceed (List Bookmark)
+    | FetchBookmarksFail Http.Error
+
+    | SetViewMode Model.BookmarkViewMode
+
+
+    | SaveState
+    | LoadState String
+
+
+update : Message -> Model.Model -> (Model.Model, Cmd Message)
 update message model =
     case message of
         FetchTags ->
             { model | loading = True
-                    , tags = []
+                    , loadedTags = []
+                    , showing = Model.ShowingNothing
             } ! [fetchTags]
 
         FetchTagsSucceed newTags ->
             { model | loading = False
-                    , tags = newTags
+                    , loadedTags = newTags
             } ! []
 
         FetchTagsFail error ->
             { model | loading = False
-                    , tags = []
-                    , messageString = "Failed to fetch tags: " ++ (toString error)
+                    , loadedTags = []
+                    , statusMessage = "Failed to fetch tags: " ++ (toString error)
             } ! []
 
-        FetchBookmarks tag ->
+        ShowAllTags ->
+            { model | loading = False
+                    , showing = Model.ShowingTags
+            } ! []
+
+
+        ShowBookmarksForTag tag ->
             { model | loading = True
-                    , currentTag = tag
+                    , showing = Model.ShowingBookmarksForTag tag
                     , bookmarks = []
-            } ! [fetchBookmarks tag]
+            } ! [showBookmarksForTag tag]
+
+        ShowUntaggedBookmarks ->
+            { model | loading = True
+                    , showing = Model.ShowingUntaggedBookmarks
+                    , bookmarks = []
+            } ! [showUntaggedBookmarks]
+
+        ShowAllBookmarks ->
+            { model | loading = True
+                    , showing = Model.ShowingAllBookmarks
+                    , bookmarks = []
+            } ! [showAllBookmarks]
 
         FetchBookmarksSucceed newBookmarks ->
-            { model | loading = False
-                    , bookmarks = newBookmarks
-                    , messageString = if List.length newBookmarks == 0 && model.currentTag.slug /= "" then "There are no bookmarks that have this tag" else ""
-            } ! [saveState model]
+            let newModel =
+                { model | loading = False
+                        , bookmarks = newBookmarks
+                        , statusMessage = if Model.showingBookmarks model && List.length newBookmarks == 0
+                                  then "There are no bookmarks that have this tag"
+                                  else ""
+                }
+            in newModel ! [Model.saveState newModel]
 
         FetchBookmarksFail error ->
             { model | loading = False
                     , bookmarks = []
-                    , messageString = "Failed to fetch bookmarks for this tag: " ++ (toString error)
+                    , statusMessage = "Failed to fetch bookmarks for this tag: " ++ (toString error)
             } ! []
 
         SetViewMode mode ->
             let newModel = { model | bookmarkViewMode = mode }
-            in newModel ! [saveState newModel]
+            in newModel ! [Model.saveState newModel]
 
         SaveState ->
-            model ! [ saveState model ]
+            model ! [Model.saveState model]
 
         LoadState data ->
-            let newModel = deserializeState data
-            in newModel ! [fetchBookmarks newModel.currentTag]
+            let newModel = Model.deserializeState data
+            in newModel ! [showBookmarksForTag (Maybe.withDefault (Tag "" "" 0) (Model.currentTag newModel))]
 
 
 -- View
+
 
 splitTagsOnPopularity tags =
     List.partition (\ tag -> tag.post_count >= 3) tags
 
 
-listTags tags = List.map (\tag -> Tags.item tag (FetchBookmarks tag)) tags
+listTags : List Tag -> List (Node Message)
+listTags tags =
+    let item = \ tag -> Tags.item tag <| ShowBookmarksForTag tag
+    in  List.map item tags
 
 
 menuTags : List Tag -> Node Message
 menuTags tags =
-    let (first, rest) = splitTagsOnPopularity tags
-    in
+    let (first, rest) = splitTagsOnPopularity tags in
     UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary" <|
         listTags first ++
         [ UI.divider
@@ -225,6 +188,7 @@ menuTags tags =
         ]
 
 
+menuCreate : Node a
 menuCreate =
     UI.popupMenu "navigation_menuCreate" "New" "plus" "basic" <|
         [ UI.linkedItem "New bookmark" "bookmark" ""
@@ -232,61 +196,64 @@ menuCreate =
         ]
 
 
-viewBookmarkList bookmarks =
-    div [ class "ui divided items" ] <|
-        List.map (\ bmark -> Bookmarks.listItem bmark FetchBookmarks) bookmarks
-
-
-viewBookmarkCards bookmarks =
-    div [ class "ui link cards" ] <|
-        List.map (\ bmark -> Bookmarks.cardItem bmark FetchBookmarks) bookmarks
-
-
+viewBookmarks : Model.Model -> Node Message
 viewBookmarks model =
-    if model.bookmarkViewMode == ListViewMode then viewBookmarkList model.bookmarks
-                                              else viewBookmarkCards model.bookmarks
+    let bookmarks = model.bookmarks
+        view = \ itemFunction divClass ->
+            div [ class divClass ] <|
+                List.map (\bookmark -> itemFunction bookmark ShowBookmarksForTag) bookmarks
+    in if model.bookmarkViewMode == Model.ListViewMode
+       then view Bookmarks.listItem "ui divided items"
+       else view Bookmarks.cardItem "ui link cards"
 
 
+header : Model.Model -> Node Message
 header model =
     UI.header projectName projectLogo
-        [ menuTags model.tags
+        [ menuTags model.loadedTags
         , menuCreate
         , div [ class "ui right inverted menu" ]
-            [ a [ class "ui item", onClick (SetViewMode ListViewMode) ] [ UI.icon "list layout" ]
-            , a [ class "ui item", onClick (SetViewMode CardViewMode) ] [ UI.icon "block layout" ]
+            [ a [ class "ui item", onClick (SetViewMode Model.ListViewMode) ] [ UI.icon "list layout" ]
+            , a [ class "ui item", onClick (SetViewMode Model.CardViewMode) ] [ UI.icon "block layout" ]
             ]
         ]
 
 
+-- tagsBreadcrumb : Model.Model -> Node Message
 tagsBreadcrumb model =
     div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
-    if model.currentTag.slug == ""
+    if Model.showingTags model
         then [ text "Tags"
              , UI.icon "divider right chevron"
              ]
-        else [ a [ onClick (FetchBookmarks Tags.none) ] [ text "Tags" ]
+        else [ a [
+                  onClick ShowAllTags
+        ] [ text "Tags" ]
              , UI.icon "divider right chevron"
-             , text model.currentTag.title
+             , text <| Maybe.withDefault ""
+                    <| Maybe.map (\tag -> tag.title) <| Model.currentTag model
              ]
 
 
+body : Model.Model -> Node Message
 body model =
     UI.body <|
         [ div [ style [ ( "height", "10em" ) ] ] []
         , div [] <|
-            if model.messageString == ""
+            if model.statusMessage == ""
             then
                 []
             else
-                [ div [ class "ui red segment" ] [ text model.messageString ] ]
+                [ div [ class "ui red segment" ] [ text model.statusMessage ] ]
 
         , tagsBreadcrumb model
-        , if model.currentTag.slug == ""
-             then div [ class "ui list" ] ( listTags model.tags )
+        , if Model.showingTags model
+             then div [ class "ui list" ] ( listTags model.loadedTags )
              else viewBookmarks model
         ]
 
 
+view : Model.Model -> Node Message
 view model = UI.page (header model) (body model)
 
 
@@ -294,9 +261,9 @@ view model = UI.page (header model) (body model)
 
 -- Subscriptions
 
-subscriptions : Model -> Sub Message
+subscriptions : Model.Model -> Sub Message
 subscriptions model =
-    load LoadState
+    Model.load LoadState
 
 
 
