@@ -63,50 +63,29 @@ fetchUntaggedBookmarksTask =
 
 
 bookmarkTagLabel tag onTagClick =
-    -- a [] [ UI.verticalDivider "white", text tag.title ]
     Tags.link tag onTagClick
 
 
--- listItem : Bookmark -> (a -> Message) -> Node Message
 listItem bookmark onTagClick =
-    div [ class "item" ]
-        [ div [ class "ui small image" ]
-            [ img [ src bookmark.picture ] [] ]
-        , div [ class "content" ]
-            [ div [ class "meta" ]
-                [ span [ class "ui right ribbon label" ] <|
-                    [ UI.icon "tags" ] ++
-                    (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
-                ]
-            , a [ class "header", href bookmark.url ]
-                [ text bookmark.title ]
-            , div [ class "description", style [ ("min-height", "4em !important") ] ]
-                [ span [] [ text bookmark.content ] ]
-            , div [ class "extra" ]
-                [ text bookmark.url ]
-            ]
-        ]
+    UI.listItem
+        bookmark.title
+        bookmark.picture
+        bookmark.content
+        bookmark.url
+        onTagClick
+        <|
+            [ UI.icon "tags" ] ++
+            (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
 
 
 cardItem bookmark onTagClick =
-    div [ class "ui card" ]
-        [ div [ class "image" ]
-            [ img [ src bookmark.picture ] []
-            , span [ class "ui right ribbon label" ] <|
-                  -- [ UI.icon "tags" ] ++
-                  (List.map (\tag -> div [ attribute "style" "white-space: nowrap" ] [ UI.icon "tag", bookmarkTagLabel tag (onTagClick tag) ]) bookmark.tags)
-            ]
-        , div [ class "content" ]
-            [ div [ class "header" ] [ a [ href bookmark.url, target "_blank" ] [ text bookmark.title ] ]
-            -- , div [ class "meta" ] [ a [ href bookmark.url, target "_blank" ] [] ]
-            -- , div [ class "meta" ]
-            --     [ span [ class "ui right ribbon label" ] <|
-            --         [ UI.icon "tags" ] ++
-            --         (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
-            --     ]
-            , div [ class "description" ] [ text bookmark.content ]
-            ]
-        , div [ class "extra content", style [ ("text-overflow", "ellipsis"), ("overflow", "hidden") ] ]
-            [ text bookmark.url ]
-        ]
+    UI.cardItem
+        bookmark.title
+        bookmark.picture
+        bookmark.content
+        bookmark.url
+        onTagClick
+        <|
+            (List.map (\tag -> div [ attribute "style" "white-space: nowrap" ] [ UI.icon "tag", bookmarkTagLabel tag (onTagClick tag) ]) bookmark.tags)
+
 

@@ -5,39 +5,93 @@ module UI exposing
     , linkedItem
     , popupMenu
     , icon
-    , verticalDivider
     , divider
+    , spacer
+    , breadcrumb
+    , clickableItem
+    , clickableIcon
+    , component
+    , list
+    , segment
+    , segment'
+    , group
+    , item
+    , menu
+    , menu'
+    , cardItem
+    , listItem
     )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 import VirtualDom exposing (Node)
 
 
-script' : String -> Node a
-script' s = node "script" [] [ text s ]
+
+spacer : String -> Node a
+spacer height = div [ style [ ( "height", height ) ] ] []
 
 
-initAllDropdowns : Node a
-initAllDropdowns = script' <|
-        "
-            $('.dropdown').dropdown({
-                on: 'hover'
-            });
-        "
+private'simplify function = function ""
 
 
-logo : String -> String -> Node a
-logo title icon =
-    span [ class "ui item big teal ribbon label" ]
-        [ img [ src icon ] []
-        , text title
-        ]
+component' : String -> String -> List (Node a) -> Node a
+component' additional className items = div [ class <| "ui " ++ additional ++ " " ++ className ] items
+component = private'simplify component'
+
+
+menu' : String -> List (Node a) -> Node a
+menu' additional items = component' "menu" additional items
+menu = private'simplify menu'
+
+
+segment' : String -> List (Node a) -> Node a
+segment' additional items = component' additional "segment" items
+segment = private'simplify segment'
+
+
+list' : String -> List (Node a) -> Node a
+list' additional items = component "list" items
+list = private'simplify list'
+
+
+item' : String -> List (Node a) -> Node a
+item' additional items = component "item" items
+item = private'simplify item'
+
+
+divider : Node a
+divider = component "divider" []
 
 
 icon : String -> Node a
 icon id = i [ class <| id ++ " icon" ] []
+
+
+breadcrumb : List (Node a) -> Node a
+breadcrumb items =
+    let breadcrumbDivider = icon "divider right chevron"
+    in
+    div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
+        (List.intersperse breadcrumbDivider items) ++ [ breadcrumbDivider ]
+
+
+clickableItem : String -> a -> Node a
+clickableItem title function =
+    a [ class "ui item", onClick function ]
+      [ text title ]
+
+
+clickableIcon : String -> a -> Node a
+clickableIcon iconName function =
+    a [ class "ui item", onClick function ]
+      [ icon iconName ]
+
+
+group : List (Node a) -> Node a
+group items = div [] items
 
 
 linkedItem : String -> String -> String -> Node a
@@ -60,7 +114,7 @@ header : String -> String -> List (Node a) -> Node a
 header pageTitle pageIcon menus =
     div [ class "ui computer tablet only row" ]
         [ div [ class "ui large fixed inverted menu navbar page grid" ]
-            ( [ logo pageTitle pageIcon ] ++ menus )
+            ( [ private'logo pageTitle pageIcon ] ++ menus )
         ]
 
 
@@ -78,18 +132,62 @@ page header items =
     div [ class "ui grid" ]
         [ header
         , items
-        , initAllDropdowns ]
+        , spacer "2em"
+        , private'initAllDropdowns
+        ]
 
 
-verticalDivider color =
-    span [
-        style
-            [ ( "color", color )
-            , ( "padding", "0 .5em" )
+listItem title picture content url onTagClick ribbonItems =
+    div [ class "item" ]
+        [ div [ class "ui small image" ]
+            [ img [ src picture ] [] ]
+        , div [ class "content" ]
+            [ div [ class "meta" ] ribbonItems
+            , a [ class "header", href url, target "_blank" ]
+                [ text title ]
+            , div [ class "description", style [ ("min-height", "4em !important") ] ]
+                [ span [] [ text content ] ]
+            , div [ class "extra" ]
+                [ text url ]
             ]
         ]
-        [ text "|" ]
 
 
-divider = div [ class "divider" ] []
+cardItem title picture content url onTagClick ribbonItems =
+    div [ class "ui card" ]
+        [ div [ class "image" ]
+            [ img [ src picture ] []
+            , span [ class "ui right ribbon label" ] ribbonItems
+            ]
+        , div [ class "content" ]
+            [ div [ class "header" ] [ a [ href url, target "_blank" ] [ text title ] ]
+            , div [ class "description" ] [ text content ]
+            ]
+        , div [ class "extra content", style [ ("text-overflow", "ellipsis"), ("overflow", "hidden") ] ]
+            [ text url ]
+        ]
+
+
+
+
+
+-- Private
+
+private'script : String -> Node a
+private'script s = node "script" [] [ text s ]
+
+private'initAllDropdowns : Node a
+private'initAllDropdowns = private'script
+    "
+        $('.dropdown').dropdown({
+            on: 'hover'
+        });
+    "
+
+private'logo : String -> String -> Node a
+private'logo title icon =
+    span [ class "ui item big teal ribbon label" ]
+        [ img [ src icon ] []
+        , text title
+        ]
 

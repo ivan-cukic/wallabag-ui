@@ -37,7 +37,7 @@ projectLogo = "assets/images/logo.svg"
 -- Tasks
 
 init : (Model.Model, Cmd Message)
-init = (Model.default, Cmd.batch [ fetchTags ] )
+init = (Model.default, Cmd.batch [ fetchTags ])
 
 
 fetchTags: Cmd Message
@@ -158,14 +158,10 @@ update message model =
             let newModel = Model.deserializeState data
             in newModel !
                 case newModel.showing of
-                    Model.ShowingTags ->
-                        [ Utils.emit ShowAllTags ]
-                    Model.ShowingBookmarksForTag tag ->
-                        [ showBookmarksForTag tag ]
-                    Model.ShowingUntaggedBookmarks ->
-                        [ showUntaggedBookmarks ]
-                    Model.ShowingAllBookmarks ->
-                        [ showAllBookmarks ]
+                    Model.ShowingTags ->                [ Utils.emit ShowAllTags ]
+                    Model.ShowingBookmarksForTag tag -> [ showBookmarksForTag tag ]
+                    Model.ShowingUntaggedBookmarks ->   [ showUntaggedBookmarks ]
+                    Model.ShowingAllBookmarks ->        [ showAllBookmarks ]
                     _ -> []
 
 
@@ -188,19 +184,14 @@ menuTags tags =
     UI.popupMenu "navigation_menuTags" "Tags" "tags" "primary" <|
         listTags first ++
         [ UI.divider
-        , div [ class "ui item" ]
+        , UI.item
             [ UI.icon "dropdown"
             , text "Other tags"
-            , div [ class "ui menu" ] <|
-                listTags rest
+            , UI.menu <| listTags rest
             ]
         , UI.divider
-        , div [ class "ui item", onClick ShowAllBookmarks ]
-            [ text "Show all bookmarks"
-            ]
-        , div [ class "ui item", onClick ShowUntaggedBookmarks ]
-            [ text "Show bookmarks without tags"
-            ]
+        , UI.clickableItem "Show all bookmarks" ShowAllBookmarks
+        , UI.clickableItem "Show bookmarks without tags" ShowUntaggedBookmarks
         ]
 
 
@@ -215,12 +206,12 @@ menuCreate =
 viewBookmarks : Model.Model -> Node Message
 viewBookmarks model =
     let bookmarks = model.bookmarks
-        view = \ itemFunction divClass ->
-            div [ class divClass ] <|
+        view = \ itemFunction componentClass ->
+            UI.component componentClass <|
                 List.map (\bookmark -> itemFunction bookmark ShowBookmarksForTag) bookmarks
     in if model.bookmarkViewMode == Model.ListViewMode
-       then view Bookmarks.listItem "ui divided items"
-       else view Bookmarks.cardItem "ui link cards"
+       then view Bookmarks.listItem "divided link items"
+       else view Bookmarks.cardItem "link cards"
 
 
 header : Model.Model -> Node Message
@@ -228,36 +219,29 @@ header model =
     UI.header projectName projectLogo
         [ menuTags model.loadedTags
         , menuCreate
-        , div [ class "ui right inverted menu" ]
-            [ a [ class "ui item", onClick (SetViewMode Model.ListViewMode) ] [ UI.icon "list layout" ]
-            , a [ class "ui item", onClick (SetViewMode Model.CardViewMode) ] [ UI.icon "block layout" ]
+        , UI.menu' "right inverted"
+            [ UI.clickableIcon "list layout"  <| SetViewMode Model.ListViewMode
+            , UI.clickableIcon "block layout" <| SetViewMode Model.CardViewMode
             ]
         ]
 
 
 tagsBreadcrumb model =
-    div [ class "ui massive breadcrumb", style [ ("padding", "1em 0") ] ] <|
+    UI.breadcrumb <|
         case model.showing of
             Model.ShowingTags ->
-                [ text "Tags"
-                , UI.icon "divider right chevron"
-                ]
+                [ text "Tags" ]
 
             Model.ShowingBookmarksForTag tag ->
-                [ a [ onClick ShowAllTags ] [ text "Tags" ]
-                , UI.icon "divider right chevron"
+                [ UI.clickableItem "Tags" ShowAllTags
                 , text tag.title
                 ]
 
             Model.ShowingUntaggedBookmarks ->
-                [ text "Bookmarks which are not tagged"
-                , UI.icon "divider right chevron"
-                ]
+                [ text "Bookmarks which are not tagged" ]
 
             Model.ShowingAllBookmarks ->
-                [ text "All bookmarks"
-                , UI.icon "divider right chevron"
-                ]
+                [ text "All bookmarks" ]
 
             _ -> []
 
@@ -265,17 +249,15 @@ tagsBreadcrumb model =
 body : Model.Model -> Node Message
 body model =
     UI.body <|
-        [ div [ style [ ( "height", "10em" ) ] ] []
-        , div [] <|
+        [ UI.spacer "3em"
+        , UI.group <|
             if model.statusMessage == ""
-            then
-                []
-            else
-                [ div [ class "ui red segment" ] [ text model.statusMessage ] ]
+            then []
+            else [ UI.segment' "red" [ text model.statusMessage ] ]
 
         , tagsBreadcrumb model
         , if Model.showingTags model
-             then div [ class "ui list" ] ( listTags model.loadedTags )
+             then UI.list <| listTags model.loadedTags
              else viewBookmarks model
         ]
 

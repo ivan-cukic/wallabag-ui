@@ -91,7 +91,6 @@ item tag clickMessage =
 
 
 link tag clickMessage =
-    -- a [] [ UI.verticalDivider "white", text tag.title ]
     a [ onClick clickMessage, style [ ("padding", "0 .5em") ] ] [ text tag.title ]
 
 
