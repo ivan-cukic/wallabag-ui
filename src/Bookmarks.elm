@@ -73,9 +73,13 @@ listItem bookmark onTagClick =
         bookmark.content
         bookmark.url
         onTagClick
-        <|
+        (
             [ UI.icon "tags" ] ++
-            (List.map (\tag -> bookmarkTagLabel tag (onTagClick tag)) bookmark.tags)
+            (List.map
+                (\tag -> bookmarkTagLabel tag (onTagClick tag))
+                bookmark.tags
+            )
+        )
 
 
 cardItem bookmark onTagClick =
@@ -85,7 +89,8 @@ cardItem bookmark onTagClick =
         bookmark.content
         bookmark.url
         onTagClick
-        <|
+        (
             (List.map (\tag -> div [ attribute "style" "white-space: nowrap" ] [ UI.icon "tag", bookmarkTagLabel tag (onTagClick tag) ]) bookmark.tags)
+        )
 
 

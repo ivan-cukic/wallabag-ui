@@ -29,7 +29,6 @@ import Html.Events exposing (..)
 import VirtualDom exposing (Node)
 
 
-
 spacer : String -> Node a
 spacer height = div [ style [ ( "height", height ) ] ] []
 
@@ -142,7 +141,8 @@ listItem title picture content url onTagClick ribbonItems =
         [ div [ class "ui small image" ]
             [ img [ src picture ] [] ]
         , div [ class "content" ]
-            [ div [ class "meta" ] ribbonItems
+            [ div [ class "meta" ]
+                [ span [ class "ui right ribbon label" ] ribbonItems ]
             , a [ class "header", href url, target "_blank" ]
                 [ text title ]
             , div [ class "description", style [ ("min-height", "4em !important") ] ]

@@ -4,8 +4,6 @@ module Tags exposing
     , Tag
     , fetchTagsTask
     , decodeTags
-    -- , error
-    -- , none
     , tag
     )
 

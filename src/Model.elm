@@ -8,20 +8,10 @@ import Json.Decode.Pipeline as JsonPipeline exposing (decode, required)
 
 import Bookmarks exposing (Bookmark)
 import Tags exposing (Tag)
+import Showing exposing (Showing)
+import BookmarkViewMode exposing (BookmarkViewMode)
 
 -- Model
-
-type BookmarkViewMode
-    = ListViewMode
-    | CardViewMode
-
-
-type Showing
-    = ShowingNothing
-    | ShowingTags
-    | ShowingBookmarksForTag Tag
-    | ShowingUntaggedBookmarks
-    | ShowingAllBookmarks
 
 type alias Model =
     { showing          : Showing
@@ -36,75 +26,38 @@ type alias Model =
 
 messageModel message =
     Model
-          ShowingTags   -- showing
-          False         -- loading
-          message       -- statusMessage
+          Showing.AllTags            -- showing
+          False                      -- loading
+          message                    -- statusMessage
 
-          []            -- there are no tags
+          []                         -- there are no tags
 
-          []            -- and no bookmarks
-          ListViewMode  -- and, by default, we want the list view
+          []                         -- and no bookmarks
+          BookmarkViewMode.ListView  -- and, by default, we want the list view
 
 default = messageModel ""
 
 showingTags : Model -> Bool
 showingTags model =
     case model.showing of
-        ShowingTags -> True
+        Showing.AllTags -> True
         _ -> False
 
 showingBookmarks : Model -> Bool
 showingBookmarks model =
     case model.showing of
-        ShowingUntaggedBookmarks -> True
-        ShowingAllBookmarks      -> True
-        ShowingBookmarksForTag _ -> True
+        Showing.UntaggedBookmarks -> True
+        Showing.AllBookmarks      -> True
+        Showing.BookmarksForTag _ -> True
         _ -> False
 
 
 -- State storage
 
-bookmarkViewMode'toString : BookmarkViewMode -> String
-bookmarkViewMode'toString mode =
-    case mode of
-        ListViewMode -> "ListViewMode"
-        CardViewMode -> "CardViewMode"
-
-bookmarkViewMode'fromString : String -> BookmarkViewMode
-bookmarkViewMode'fromString mode =
-    case mode of
-        "ListViewMode" -> ListViewMode
-        "CardViewMode" -> CardViewMode
-        _              -> ListViewMode
-
-
-
-showing'toString : Showing -> String
-showing'toString showing =
-    case showing of
-        ShowingNothing           -> "ShowingNothing"
-        ShowingTags              -> "ShowingTags"
-        ShowingBookmarksForTag _ -> "ShowingBookmarksForTag"
-        ShowingUntaggedBookmarks -> "ShowingUntaggedBookmarks"
-        ShowingAllBookmarks      -> "ShowingAllBookmarks"
-
-showing'fromString : String -> Maybe Tag -> Showing
-showing'fromString showing maybeTag =
-    case showing of
-        "ShowingNothing"           -> ShowingNothing
-        "ShowingTags"              -> ShowingTags
-        "ShowingBookmarksForTag"   -> (case maybeTag of
-                                          Nothing -> ShowingAllBookmarks
-                                          Just tag -> ShowingBookmarksForTag tag)
-        "ShowingUntaggedBookmarks" -> ShowingUntaggedBookmarks
-        "ShowingAllBookmarks"      -> ShowingAllBookmarks
-        _                          -> ShowingNothing
-
-
 currentTag : Model -> Maybe Tag
 currentTag model =
     case model.showing of
-        ShowingBookmarksForTag tag -> Just tag
+        Showing.BookmarksForTag tag -> Just tag
         _ -> Nothing
 
 
@@ -123,7 +76,7 @@ type alias State =
 serializeState : Model -> String
 serializeState model =
     JsonEnc.encode 0 <| JsonEnc.object
-        [ ("showing"          , JsonEnc.string <| showing'toString model.showing)
+        [ ("showing"          , JsonEnc.string <| Showing.toString model.showing)
         , ("tagSlug"          , JsonEnc.string <| Maybe.withDefault "" <| Maybe.map (\tag -> tag.slug)  <| currentTag model)
         , ("tagTitle"         , JsonEnc.string <| Maybe.withDefault "" <| Maybe.map (\tag -> tag.title) <| currentTag model)
         , ("bookmarkViewMode" , JsonEnc.string <| toString model.bookmarkViewMode)
@@ -138,8 +91,9 @@ decodeState = decode State
 
 modelFromState : State -> Model
 modelFromState state =
-    { default | showing = showing'fromString state.showing <| Tags.tag state.tagSlug state.tagTitle
-              , bookmarkViewMode = bookmarkViewMode'fromString state.bookmarkViewMode
+    { default | showing =
+                    Showing.fromString state.showing (Tags.tag state.tagSlug state.tagTitle)
+              , bookmarkViewMode = BookmarkViewMode.fromString state.bookmarkViewMode
     }
 
 
